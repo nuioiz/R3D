@@ -1,0 +1,12 @@
+{
+  "name": "R3D",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "R3D": {
+        "$path": "src"
+      }
+    }
+  }
+}
