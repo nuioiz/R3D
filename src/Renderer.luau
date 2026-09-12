@@ -1,15 +1,15 @@
-const Mesh = require("./Mesh")
-const Texture = require("./Texture")
+const Camera = require("./Camera")
+type Camera = Camera.Camera
 
+const Mesh = require("./Mesh")
 type Mesh = Mesh.Mesh
+
+const Texture = require("./Texture")
 type Texture = Texture.Texture
 
 type Matrix4 = { { number } }
 type Vector4 = { number }
 
-const FOV = 70
-const NEAR = 0.1
-const FAR = 1000
 const ANIM_SPEED = 1
 
 const cube = Mesh.new({
@@ -39,8 +39,7 @@ const cube = Mesh.new({
 	},
 })
 
-const cameraCFrame = CFrame.new(0, 0, -1)
-local cubeCFrame = CFrame.identity
+local cubeCFrame = CFrame.new(0, 0, -5)
 
 const Renderer = {}
 Renderer.__index = Renderer
@@ -48,33 +47,6 @@ Renderer.__index = Renderer
 export type Renderer = setmetatable<{
 	target: Texture,
 }, typeof(Renderer)>
-
-const function makeProjectionMatrix(aspect: number): Matrix4
-	const fovRad = 1 / math.tan(math.rad(FOV) / 2)
-	const rangeInv = 1 / (NEAR - FAR)
-	return {
-		{ fovRad / aspect, 0, 0, 0 },
-		{ 0, fovRad, 0, 0 },
-		{ 0, 0, (NEAR + FAR) * rangeInv, 2 * NEAR * FAR * rangeInv },
-		{ 0, 0, -1, 0 },
-	}
-end
-
-const function mulMatVec(m: Matrix4, v: Vector4): Vector4
-	const out = { 0, 0, 0, 0 }
-	for row = 1, 4 do
-		local sum = 0
-		for col = 1, 4 do
-			sum += m[row][col] * v[col]
-		end
-		out[row] = sum
-	end
-	return out
-end
-
-const function worldToCamera(pos: Vector3): Vector3
-	return cameraCFrame:PointToObjectSpace(pos) :: Vector3
-end
 
 function Renderer.new(target: Texture): Renderer
 	return setmetatable({
@@ -89,11 +61,10 @@ function Renderer.drawWireframe(self: Renderer, p0: Vector2, p1: Vector2, p2: Ve
 	view:DrawLine(p2, p0, color, 0, Enum.ImageCombineType.Overwrite)
 end
 
-function Renderer.render(self: Renderer, dt: number)
+function Renderer.render(self: Renderer, camera: Camera, dt: number)
 	const target = self.target
 	const size = target:getSize()
 	const aspect = size.X / size.Y
-	const projMatrix = makeProjectionMatrix(aspect)
 
 	target:clear(0xFF000000)
 
@@ -104,18 +75,15 @@ function Renderer.render(self: Renderer, dt: number)
 	const projected = {}
 	for i, vert in cube.vertices do
 		const worldPos = cubeCFrame:PointToWorldSpace(vert)
-		const camPos = worldToCamera(worldPos)
-
-		const v = { camPos.X, camPos.Y, -camPos.Z, 1 }
-		const clip = mulMatVec(projMatrix, v)
-
-		if clip[4] <= 0 then
+		const viewPos = camera:worldToView(worldPos)
+		const clipPos = camera:viewToClip(aspect, viewPos)
+		if clipPos.w <= 0 then
 			continue
 		end
 
-		const ndc = Vector3.new(clip[1] / clip[4], clip[2] / clip[4], clip[3] / clip[4])
+		const ndcPos = clipPos:perspectiveDivide()
 
-		local screenPos = Vector3.new((ndc.X * 0.5 + 0.5) * size.X, (1 - (ndc.Y * 0.5 + 0.5)) * size.Y, ndc.Z)
+		local screenPos = Vector3.new((ndcPos.X / 2 + 0.5) * size.X, (1 - (ndcPos.Y / 2 + 0.5)) * size.Y, ndcPos.Z)
 
 		screenPos = screenPos:Min(Vector3.new(size.X - 1, size.Y - 1, 0)):Max(Vector3.zero)
 
