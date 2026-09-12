@@ -16,8 +16,4 @@ function Object.new(cframe: CFrame, mesh: Mesh): Object
 	}, Object)
 end
 
-function Object.localToWorld(self: Object, ...: Vector3): ...Vector3
-	return self.cframe:PointToWorldSpace(...)
-end
-
 return table.freeze(Object)
