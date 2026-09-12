@@ -1,45 +1,11 @@
 const Camera = require("./Camera")
 type Camera = Camera.Camera
 
-const Mesh = require("./Mesh")
-type Mesh = Mesh.Mesh
-
 const Texture = require("./Texture")
 type Texture = Texture.Texture
 
-type Matrix4 = { { number } }
-type Vector4 = { number }
-
-const ANIM_SPEED = 1
-
-const cube = Mesh.new({
-	vertices = {
-		Vector3.new(0, 0, 0),
-		Vector3.new(1, 0, 0),
-		Vector3.new(0, 1, 0),
-		Vector3.new(1, 1, 0),
-		Vector3.new(0, 0, 1),
-		Vector3.new(1, 0, 1),
-		Vector3.new(0, 1, 1),
-		Vector3.new(1, 1, 1),
-	},
-	indices = {
-		{ 4, 8, 2 },
-		{ 2, 8, 6 },
-		{ 7, 8, 3 },
-		{ 3, 8, 4 },
-		{ 8, 7, 6 },
-		{ 6, 7, 5 },
-		{ 7, 3, 5 },
-		{ 5, 3, 1 },
-		{ 1, 2, 5 },
-		{ 5, 2, 6 },
-		{ 3, 4, 1 },
-		{ 1, 4, 2 },
-	},
-})
-
-local cubeCFrame = CFrame.new(0, 0, -5)
+const Object = require("./Object")
+type Object = Object.Object
 
 const Renderer = {}
 Renderer.__index = Renderer
@@ -61,20 +27,19 @@ function Renderer.drawWireframe(self: Renderer, p0: Vector2, p1: Vector2, p2: Ve
 	view:DrawLine(p2, p0, color, 0, Enum.ImageCombineType.Overwrite)
 end
 
-function Renderer.render(self: Renderer, camera: Camera, dt: number)
+function Renderer.render(self: Renderer, object: Object, camera: Camera)
 	const target = self.target
 	const size = target:getSize()
 	const aspect = size.X / size.Y
+	const mesh = object.mesh
 
 	target:clear(0xFF000000)
 
 	target:present()
 
-	cubeCFrame *= CFrame.Angles(dt * 0.7 * ANIM_SPEED, dt * ANIM_SPEED, 0)
-
 	const projected = {}
-	for i, vert in cube.vertices do
-		const worldPos = cubeCFrame:PointToWorldSpace(vert)
+	for i, vertex in mesh.vertices do
+		const worldPos = object:localToWorld(vertex)
 		const viewPos = camera:worldToView(worldPos)
 		const clipPos = camera:viewToClip(aspect, viewPos)
 		if clipPos.w <= 0 then
@@ -90,7 +55,7 @@ function Renderer.render(self: Renderer, camera: Camera, dt: number)
 		projected[i] = screenPos
 	end
 
-	for _, tri in cube.indices do
+	for _, tri in mesh.indices do
 		const p0 = projected[tri[1]]
 		const p1 = projected[tri[2]]
 		const p2 = projected[tri[3]]
