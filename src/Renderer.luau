@@ -39,20 +39,16 @@ function Renderer.render(self: Renderer, object: Object, camera: Camera)
 
 	const projected = {}
 	for i, vertex in mesh.vertices do
-		const worldPos = object:localToWorld(vertex)
-		const viewPos = camera:worldToView(worldPos)
-		const clipPos = camera:viewToClip(aspect, viewPos)
-		if clipPos.w <= 0 then
+		const world = object:localToWorld(vertex)
+		const view = camera:worldToView(world)
+		const clip = camera:viewToClip(aspect, view)
+		if clip.w <= 0 then
 			continue
 		end
 
-		const ndcPos = clipPos:perspectiveDivide()
-
-		local screenPos = Vector3.new((ndcPos.X / 2 + 0.5) * size.X, (1 - (ndcPos.Y / 2 + 0.5)) * size.Y, ndcPos.Z)
-
-		screenPos = screenPos:Min(Vector3.new(size.X - 1, size.Y - 1, 0)):Max(Vector3.zero)
-
-		projected[i] = screenPos
+		const ndc = clip.xyz / clip.w
+		local screen = Vector3.new((ndc.X / 2 + 0.5) * size.X, (1 - (ndc.Y / 2 + 0.5)) * size.Y, ndc.Z)
+		projected[i] = screen:Min(Vector3.new(size.X - 1, size.Y - 1, 0)):Max(Vector3.zero)
 	end
 
 	for _, tri in mesh.indices do
