@@ -4,30 +4,31 @@ const Texture = {}
 Texture.__index = Texture
 
 export type Texture = setmetatable<{
-	_size: Vector2,
-	_buffer: buffer,
-	_view: EditableImage?,
+	read _size: Vector2,
+	read _buffer: buffer,
+	read _view: EditableImage,
 }, typeof(Texture)>
 
 function Texture.new(size: Vector2): Texture
+	const view = AssetService:CreateEditableImage({ Size = size })
+	assert(view, "Failed to create EditableImage")
+
 	return setmetatable({
 		_size = size,
 		_buffer = buffer.create(size.X * size.Y * 4),
-	}, Texture) :: Texture
+		_view = view,
+	}, Texture)
 end
 
 function Texture.loadAsync(content: Content): Texture
-	const temp = AssetService:CreateEditableImageAsync(content)
-	assert(temp)
+	const view = AssetService:CreateEditableImageAsync(content)
+	assert(view, "Failed to create EditableImage")
 
-	const self = setmetatable({
-		_size = temp.Size,
-		_buffer = temp:ReadPixelsBuffer(Vector2.zero, temp.Size),
-	}, Texture) :: Texture
-
-	temp:Destroy()
-
-	return self
+	return setmetatable({
+		_size = view.Size,
+		_buffer = view:ReadPixelsBuffer(Vector2.zero, view.Size),
+		_view = view,
+	}, Texture)
 end
 
 function Texture.clear(self: Texture, color: number?)
@@ -44,15 +45,8 @@ function Texture.clear(self: Texture, color: number?)
 	end
 end
 
-function Texture.resize(self: Texture, size: Vector2)
-	self._size = size
-	self._buffer = buffer.create(size.X * size.Y * 4)
-end
-
 function Texture.present(self: Texture)
-	if self._view then
-		self._view:WritePixelsBuffer(Vector2.zero, self._size, self._buffer)
-	end
+	self._view:WritePixelsBuffer(Vector2.zero, self._size, self._buffer)
 end
 
 function Texture.getSize(self: Texture): Vector2
